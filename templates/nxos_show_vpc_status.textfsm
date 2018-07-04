@@ -1,0 +1,5 @@
+Value NAME ([^:]+)
+Value STATUS ([^:]+)
+
+Start
+  ^${NAME}\s+:${STATUS} -> Record

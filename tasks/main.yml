@@ -1,0 +1,28 @@
+---
+- name: Get VPC information
+  nxos_command:
+    commands:
+      - show vpc
+  register: command_output
+
+- name: Set the textfsm templates
+  set_fact:
+    nxos_vpc_status_template: "{{ role_path }}/templates/nxos_show_vpc_status.textfsm"
+    nxos_vpc_template: "{{ role_path }}/templates/nxos_show_vpc.textfsm"
+
+- name: Parse VPC status
+  set_fact:
+    nxos_vpc_status: "{{ command_output.stdout[0] | parse_cli_textfsm(nxos_vpc_status_template) }}"
+    nxos_vpc_list: "{{ command_output.stdout[0] | parse_cli_textfsm(nxos_vpc_template) }}"
+
+- name: Set status values
+  set_fact:
+    nxos_vpc_domain_id: "{{ nxos_vpc_status | selectattr('NAME', 'search', '^vPC domain id') | map(attribute='STATUS') | join | regex_replace(' ', '') }}"
+    nxos_vpc_role: "{{ nxos_vpc_status | selectattr('NAME', 'search', '^vPC role') | map(attribute='STATUS') | join | regex_replace('^\\s*', '') | regex_replace('\\s*$', '')}}"
+    nxos_vpc_peer_status: "{{ nxos_vpc_status | selectattr('NAME', 'search', '^Peer status') | map(attribute='STATUS') | join | regex_replace('^\\s*', '') | regex_replace('\\s*$', '')}}"
+    nxos_vpc_number: "{{ nxos_vpc_status | selectattr('NAME', 'search', '^Number of vPCs configured') | map(attribute='STATUS') | join | regex_replace(' ', '') }}"
+    nxos_vpc_keepalive_status: "{{ nxos_vpc_status | selectattr('NAME', 'search', '^vPC keep-alive status') | map(attribute='STATUS') | join | regex_replace('^\\s*', '') | regex_replace('\\s*$', '')}}"
+    nxos_vpc_config_consistency_status: "{{ nxos_vpc_status | selectattr('NAME', 'search', '^Configuration consistency status') | map(attribute='STATUS') | join | regex_replace('^\\s*', '') | regex_replace('\\s*$', '')}}"
+    nxos_vpc_vlan_consistency_status: "{{ nxos_vpc_status | selectattr('NAME', 'search', '^Per-vlan consistency status') | map(attribute='STATUS') | join | regex_replace('^\\s*', '') | regex_replace('\\s*$', '')}}"
+    nxos_vpc_type2_consistency_status: "{{ nxos_vpc_status | selectattr('NAME', 'search', '^Type-2 consistency status') | map(attribute='STATUS') | join | regex_replace('^\\s*', '') | regex_replace('\\s*$', '')}}"
+    nxos_vpc_down_list: "{{ nxos_vpc_list | selectattr('STATUS', 'search', 'down') | map(attribute='PORT') | list }}"
