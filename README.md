@@ -1,38 +1,61 @@
-Role Name
-=========
+# nxos-vpc-facts
 
-A brief description of the role goes here.
+This Ansible role retrieves facts about the VPC configuration of a Cisco Nexus switch.  These facts can then be used to check the status before and after a maintance operation.
 
-Requirements
-------------
+# Requirements
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+The inventory must be properly setup for the platforms being used from the [Ansible Network Modules](https://docs.ansible.com/ansible/latest/network/index.html).
 
-Role Variables
---------------
+# Example Playbook
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+To run the role to just collect the facts:
+    - hosts: vpc_switches
+      gather_facts: no
+      tasks:
+        - include_role:
+            name: nxos-vpc-facts
 
-Dependencies
-------------
+These facts are make available from `show vpc brief`:
+* nxos_vpc_domain_id
+* nxos_vpc_role
+* nxos_vpc_peer_status
+* nxos_vpc_keepalive_status
+* nxos_vpc_config_consistency_status
+* nxos_vpc_vlan_consistency_status
+* nxos_vpc_type2_consistency_status
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+These facts can then be checked in the playbook:
 
-Example Playbook
-----------------
+    - hosts: vpc_switches
+      gather_facts: no
+      tasks:
+        - include_role:
+            name: nxos-vpc-facts
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+        - debug:
+            msg: 'VPC Domain ID: {{ nxos_vpc_domain_id }}'
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+        - debug:
+            msg: 'VPC Role: {{ nxos_vpc_role }}'
 
-License
--------
+        - debug:
+            msg: '*WARNING* The following VPCs are down: {{ nxos_vpc_down_list | join(",") }}'
+          when: nxos_vpc_down_list
 
-BSD
+        - name: Check VPC Status
+          assert:
+            that:
+              - nxos_vpc_peer_status is search('formed ok')
+              - nxos_vpc_keepalive_status is search('alive')
+              - nxos_vpc_config_consistency_status == 'success'
+              - nxos_vpc_vlan_consistency_status == 'success'
+              - nxos_vpc_type2_consistency_status == 'success'
+            msg: "VPC must be consisteany and have a reachable peer"
 
-Author Information
-------------------
+# License
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+GPL-3
+
+# Author Information
+
+Steven Carter
